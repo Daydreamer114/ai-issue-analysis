@@ -262,7 +262,7 @@ runs:
       shell: bash
       env:
         COPILOT_GITHUB_TOKEN: ${{ steps.resolve_copilot_token.outputs.copilot_token }}
-        GITHUB_TOKEN: ${{ inputs.github-token }}
+        COMMENT_GITHUB_TOKEN: ${{ inputs.github-token }}
         GITHUB_SERVER_URL: ${{ github.server_url }}
         COMMENT_ID: ${{ steps.initial_comment.outputs.comment-id }}
         ISSUE_NUMBER: ${{ steps.issue_number.outputs.issue_number }}
@@ -346,7 +346,7 @@ runs:
 
               jq -n --arg body "$(cat "$BODY_FILE")" '{"body":$body}' | \
                 curl -s -L -X PATCH \
-                  -H "Authorization: token $GITHUB_TOKEN" \
+                  -H "Authorization: token $COMMENT_GITHUB_TOKEN" \
                   -H "Accept: application/vnd.github.v3+json" \
                   "https://api.github.com/repos/$REPO/issues/comments/$COMMENT_ID" \
                   -d @-
