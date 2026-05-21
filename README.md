@@ -11,7 +11,7 @@
 
 ### 使用 GitHub Copilot
 
-1. 使用 Copilot 时请确保你有 Copilot Pro；使用 Cursor 时请准备 Cursor API Key
+1. 请确保你有 Copilot Pro
 2. 前往 [GitHub PAT](https://github.com/settings/personal-access-tokens) 新增一个 token  
 
     - Expiration (过期时间): 设为一年以内（太长反而会报错）
@@ -23,12 +23,12 @@
      - Name: `COPILOT_GITHUB_TOKEN`
      - Secret: 上一步中生成的那个
 
-5. 把下面两个文件拷贝到你的仓库里，文件夹不要变
+4. 把下面两个文件拷贝到你的仓库里，文件夹不要变
 
     - [`.github/workflows/ai-issue-analysis.yml`](.github/workflows/ai-issue-analysis.yml)
     - [`.claude/skills/generic-issue-log-analysis/SKILL.md`](.claude/skills/generic-issue-log-analysis/SKILL.md)
 
-6. 新提个 issue 测试下能否正常运行了，或者在以前的 issue 里 `@github-actions`
+5. 新提个 issue 测试下能否正常运行了，或者在以前的 issue 里 `@github-actions`
 
 ### 使用 Cursor CLI（可选）
 
@@ -42,7 +42,6 @@
     ai-provider: cursor
     github-token: ${{ secrets.GITHUB_TOKEN }}
     cursor-api-key: ${{ secrets.CURSOR_API_KEY }}
-    copilot-github-token: ${{ secrets.COPILOT_GITHUB_TOKEN }}  # action schema 仍为 required，cursor 分支不会用到
 ```
 
 > 不传 `ai-provider` 时默认使用 Copilot，现有 workflow 无需改动。
@@ -63,10 +62,11 @@
     如果你的 workflow_dispatch 输入名不是 `issue_number`，或者你在其他事件里调用这个 action，就显式传 `issue-number`。
 
 - `github-token`: 用于创建和更新 Issue 评论
-- `copilot-github-token`: Copilot CLI 使用的 Fine-grained token，支持传多个 token，每行一个，action 会随机选择一个使用
+- `copilot-github-token`: Copilot CLI 使用的 Fine-grained token；`ai-provider=copilot` 时在运行时必填，支持传多个 token，每行一个，action 会随机选择一个使用
 - `ai-provider`: AI 后端，`copilot`（默认）或 `cursor`
 - `cursor-api-key`: Cursor CLI 使用的 API Key；`ai-provider=cursor` 时在运行时必填，支持多 key 换行随机选择
 - `cursor-model`: Cursor CLI 模型名，默认 `composer-2.5`
+- `cursor-cli-version`: Cursor CLI lab 构建版本；留空时从官方 install 脚本元数据解析，建议生产环境固定版本
 - `bot-name`: 从 `issue_comment` 正文中剥离掉的 bot mention，比如 `@YourBot`
 - `initial-comment-body`: 开始分析时先发出的评论正文
 - `action-link-text`: 评论里展示的运行链接文字

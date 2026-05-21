@@ -11,8 +11,9 @@ inputs:
     description: GitHub token used to create and update issue comments.
     required: true
   copilot-github-token:
-    description: Fine-grained GitHub token with Copilot access for the Copilot CLI. Supports multiple tokens, one per line, and randomly picks one.
-    required: true
+    description: Fine-grained GitHub token with Copilot access for the Copilot CLI. Required at runtime when ai-provider is copilot. Supports multiple tokens, one per line, and randomly picks one.
+    required: false
+    default: ""
   bot-name:
     description: Bot mention to strip from issue_comment messages before appending extra requirements.
     required: false
@@ -92,6 +93,10 @@ inputs:
     description: Cursor CLI model name passed to cursor-agent --model.
     required: false
     default: composer-2.5
+  cursor-cli-version:
+    description: Cursor CLI lab build id (for example 2026.05.20-2b5dd59). Empty resolves the version pinned by the official install script metadata.
+    required: false
+    default: ""
 
 outputs:
   issue-number:
@@ -171,18 +176,23 @@ runs:
       env:
         AI_PROVIDER: ${{ steps.provider.outputs.provider }}
         INPUT_CURSOR_API_KEY: ${{ inputs.cursor-api-key }}
+        INPUT_COPILOT_GITHUB_TOKEN: ${{ inputs.copilot-github-token }}
       run: |
         python <<'PY'
         import os
 
         provider = os.environ["AI_PROVIDER"]
-        if provider != "cursor":
-            raise SystemExit(0)
 
-        raw_value = os.environ["INPUT_CURSOR_API_KEY"]
-        keys = [line.strip() for line in raw_value.splitlines() if line.strip()]
-        if not keys:
-            raise SystemExit("Input cursor-api-key is required when ai-provider=cursor.")
+        if provider == "cursor":
+            raw_value = os.environ["INPUT_CURSOR_API_KEY"]
+            keys = [line.strip() for line in raw_value.splitlines() if line.strip()]
+            if not keys:
+                raise SystemExit("Input cursor-api-key is required when ai-provider=cursor.")
+        elif provider == "copilot":
+            raw_value = os.environ["INPUT_COPILOT_GITHUB_TOKEN"]
+            tokens = [line.strip() for line in raw_value.splitlines() if line.strip()]
+            if not tokens:
+                raise SystemExit("Input copilot-github-token is required when ai-provider=copilot.")
         PY
 
     - name: Prepare runtime files
@@ -287,9 +297,55 @@ runs:
     - name: Install Cursor CLI
       if: ${{ steps.provider.outputs.provider == 'cursor' }}
       shell: bash
+      env:
+        INPUT_CURSOR_CLI_VERSION: ${{ inputs.cursor-cli-version }}
       run: |
-        curl https://cursor.com/install -fsS | bash
-        echo "$HOME/.cursor/bin" >> "$GITHUB_PATH"
+        set -euo pipefail
+
+        OS="linux"
+        ARCH="$(uname -m)"
+        case "${ARCH}" in
+          x86_64|amd64) ARCH="x64" ;;
+          arm64|aarch64) ARCH="arm64" ;;
+          *)
+            echo "Unsupported architecture: ${ARCH}"
+            exit 1
+            ;;
+        esac
+
+        VERSION="${INPUT_CURSOR_CLI_VERSION}"
+        if [ -z "$VERSION" ]; then
+          INSTALL_SCRIPT="${RUNNER_TEMP}/cursor-install.sh"
+          curl -fsSL "https://cursor.com/install" -o "$INSTALL_SCRIPT"
+          VERSION="$(grep -Eo 'downloads\.cursor\.com/lab/[^/]+' "$INSTALL_SCRIPT" | head -1 | cut -d/ -f3)"
+          if [ -z "$VERSION" ]; then
+            echo "Unable to resolve Cursor CLI version from install script metadata."
+            exit 1
+          fi
+        fi
+
+        PACKAGE_URL="https://downloads.cursor.com/lab/${VERSION}/${OS}/${ARCH}/agent-cli-package.tar.gz"
+        PACKAGE_FILE="${RUNNER_TEMP}/cursor-agent-cli.tar.gz"
+
+        echo "Installing Cursor CLI ${VERSION} for ${OS}/${ARCH}"
+        curl -fSL "$PACKAGE_URL" -o "$PACKAGE_FILE"
+
+        if [ ! -s "$PACKAGE_FILE" ]; then
+          echo "Downloaded Cursor CLI package is empty."
+          exit 1
+        fi
+
+        tar -tzf "$PACKAGE_FILE" >/dev/null
+
+        INSTALL_ROOT="${HOME}/.local/share/cursor-agent/versions/${VERSION}"
+        mkdir -p "$INSTALL_ROOT"
+        tar --strip-components=1 -xzf "$PACKAGE_FILE" -C "$INSTALL_ROOT"
+
+        mkdir -p "${HOME}/.local/bin"
+        ln -sf "${INSTALL_ROOT}/cursor-agent" "${HOME}/.local/bin/cursor-agent"
+        ln -sf "${INSTALL_ROOT}/cursor-agent" "${HOME}/.local/bin/agent"
+        echo "${HOME}/.local/bin" >> "$GITHUB_PATH"
+
         cursor-agent --version
 
     - name: Resolve Copilot token
@@ -311,8 +367,11 @@ runs:
 
         selected_token = secrets.choice(tokens)
 
+        print(f"::add-mask::{selected_token}")
+        with open(os.environ["GITHUB_ENV"], "a", encoding="utf-8") as fh:
+            fh.write(f"COPILOT_GITHUB_TOKEN={selected_token}\n")
+
         with open(os.environ["GITHUB_OUTPUT"], "a", encoding="utf-8") as fh:
-            fh.write(f"copilot_token={selected_token}\n")
             fh.write(f"copilot_token_count={len(tokens)}\n")
         PY
 
@@ -335,8 +394,11 @@ runs:
 
         selected_key = secrets.choice(keys)
 
+        print(f"::add-mask::{selected_key}")
+        with open(os.environ["GITHUB_ENV"], "a", encoding="utf-8") as fh:
+            fh.write(f"CURSOR_API_KEY={selected_key}\n")
+
         with open(os.environ["GITHUB_OUTPUT"], "a", encoding="utf-8") as fh:
-            fh.write(f"cursor_api_key={selected_key}\n")
             fh.write(f"cursor_api_key_count={len(keys)}\n")
         PY
 
@@ -344,8 +406,6 @@ runs:
       shell: bash
       env:
         AI_PROVIDER: ${{ steps.provider.outputs.provider }}
-        COPILOT_GITHUB_TOKEN: ${{ steps.resolve_copilot_token.outputs.copilot_token }}
-        CURSOR_API_KEY: ${{ steps.resolve_cursor_api_key.outputs.cursor_api_key }}
         COMMENT_GITHUB_TOKEN: ${{ inputs.github-token }}
         GITHUB_SERVER_URL: ${{ github.server_url }}
         COMMENT_ID: ${{ steps.initial_comment.outputs.comment-id }}
