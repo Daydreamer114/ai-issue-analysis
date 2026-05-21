@@ -11,7 +11,7 @@
 
 ### 使用 GitHub Copilot
 
-1. 请确保你有 Copilot Pro (当前仅支持 Copilot，以后可能适配 codex 等更多工具，欢迎 ISSUE 催更~)
+1. 使用 Copilot 时请确保你有 Copilot Pro；使用 Cursor 时请准备 Cursor API Key
 2. 前往 [GitHub PAT](https://github.com/settings/personal-access-tokens) 新增一个 token  
 
     - Expiration (过期时间): 设为一年以内（太长反而会报错）
@@ -37,7 +37,7 @@
 3. 调用 action 时指定 `ai-provider: cursor` 并传入 `cursor-api-key`：
 
 ```yaml
-- uses: Daydreamer114/ai-issue-analysis@feat/cursor
+- uses: MistEO/ai-issue-analysis@main
   with:
     ai-provider: cursor
     github-token: ${{ secrets.GITHUB_TOKEN }}
@@ -84,19 +84,19 @@
 - `issue-number`: 本次运行实际解析出的 Issue 编号
 - `comment-id`: 创建并持续更新的评论 ID
 - `comment-url`: 创建并持续更新的评论 URL
-- `analysis-prompt`: 本次最终传给 Copilot 的 prompt
-- `copilot-output`: 完整执行日志，包含 Copilot 启动前的参数打印、prompt 正文，以及 Copilot CLI 输出
-- `final-conclusion`: Copilot 写入 `copilot-answer-file` 的最终结论
+- `analysis-prompt`: 本次最终传给 AI 后端的 prompt
+- `copilot-output`: 完整执行日志，包含启动前参数、prompt 正文，以及 Copilot CLI / Cursor CLI 输出
+- `final-conclusion`: 写入 `copilot-answer-file` 的最终结论
 - `analysis-prompt`、`copilot-output` 和 `final-conclusion` 在过长时会为适配 GitHub Actions output 大小限制而被截断；完整内容优先从 artifacts 读取
 
 ## 上传产物
 
-- `copilot-output-issue-<issue-number>-comment-<comment-id>`: 完整执行日志，包含启动前参数、prompt 正文和 Copilot CLI 输出
+- `copilot-output-issue-<issue-number>-comment-<comment-id>`: 完整执行日志，包含启动前参数、prompt 正文和 AI CLI 输出
 - `final-conclusion-issue-<issue-number>-comment-<comment-id>`: 最终结论文本
 
 ## Skill 配合
 
-- 这个 action 只负责 GitHub Actions 编排、评论更新、Copilot CLI 调用和 prompt 拼接，不内置项目领域知识
+- 这个 action 只负责 GitHub Actions 编排、评论更新、AI CLI 调用和 prompt 拼接，不内置项目领域知识
 - 对需要分析 issue 附件、日志包、运行时配置、跨仓库代码路径的项目，建议配套提供项目自己的 issue 分析 skill
 - 一个可行的 skill 一般至少会覆盖这些步骤：读取 issue 正文和评论、定位并下载日志附件、先建立时间线再筛证据、最后回溯到代码和文档做归因
 - 如果没有这层 skill，action 仍然能运行，但对日志包、截图、跨模块调用链这类问题，分析质量通常会明显下降
@@ -119,8 +119,8 @@
 - `ai-provider=cursor` 时会安装 Cursor CLI 并调用 `cursor-agent`
 - 会先创建一条评论，然后持续更新这条评论
 - 会导出 `comment-id`、`comment-url`、`analysis-prompt`、`copilot-output`、`final-conclusion` 等 action outputs
-- `copilot-output` 会包含 Copilot 启动前的参数打印和 prompt 正文，不再只是 Copilot 进程本身的 stdout/stderr
-- 会上传 Copilot 原始输出和最终结论两个 artifacts
+- `copilot-output` 会包含启动前的参数打印和 prompt 正文，不再只是 AI CLI 进程本身的 stdout/stderr
+- 会上传 AI 原始输出和最终结论两个 artifacts
 - 最终评论会包含最终结论、完整分析过程折叠块，以及当前 Actions 运行链接
 - `copilot-github-token` 兼容单个 token，也兼容多个 token 按行填写；传多个时每次运行会随机选一个
 

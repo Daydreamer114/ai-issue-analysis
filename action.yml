@@ -104,13 +104,13 @@ outputs:
     description: The URL of the issue comment that was created and then updated.
     value: ${{ steps.export_results.outputs.comment-url }}
   analysis-prompt:
-    description: Final rendered prompt passed to Copilot for this run.
+    description: Final rendered prompt passed to the AI backend for this run.
     value: ${{ steps.export_results.outputs.analysis-prompt }}
   copilot-output:
-    description: Execution log including pre-run parameters, prompt, and Copilot stdout and stderr.
+    description: Execution log including pre-run parameters, prompt, and AI CLI stdout and stderr.
     value: ${{ steps.export_results.outputs.copilot-output }}
   final-conclusion:
-    description: Final conclusion content produced by Copilot.
+    description: Final conclusion content written to copilot-answer-file.
     value: ${{ steps.export_results.outputs.final-conclusion }}
 
 runs:

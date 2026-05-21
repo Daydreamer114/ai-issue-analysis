@@ -15,6 +15,7 @@ jobs:
       contents: read
       issues: write
     steps:
+      # 本仓库 CI 使用本地 action；接入方请改为 MistEO/ai-issue-analysis@main
       - name: Analyze issue with Cursor
         id: analysis
         uses: ./
