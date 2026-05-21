@@ -1,10 +1,6 @@
-name: AI Issue Analysis
+name: AI Issue Analysis (Cursor)
 
 on:
-  issues:
-    types: [opened]
-  issue_comment:
-    types: [created]
   workflow_dispatch:
     inputs:
       issue_number:
@@ -13,30 +9,22 @@ on:
         type: number
 
 jobs:
-  copilot-analysis:
-    if: |
-      (github.event_name == 'issues' && github.event.action == 'opened') ||
-      github.event_name == 'workflow_dispatch' ||
-      (github.event_name == 'issue_comment' &&
-       github.event.action == 'created' &&
-       contains(github.event.comment.body, '@github-actions') &&
-       github.event.comment.user.type != 'Bot')
+  cursor-analysis:
     runs-on: ubuntu-latest
     permissions:
       contents: read
       issues: write
     steps:
-      - name: Analyze issue with AI
+      - name: Analyze issue with Cursor
         id: analysis
         uses: Daydreamer114/ai-issue-analysis@main
         with:
-          copilot-github-token: ${{ secrets.COPILOT_GITHUB_TOKEN }}
-          bot-name: "@github-actions"
+          ai-provider: cursor
+          cursor-api-key: ${{ secrets.CURSOR_API_KEY }}
           github-token: ${{ secrets.GITHUB_TOKEN }}
-          copilot-model: gpt-5.4
-          copilot-reasoning-effort: xhigh
+          bot-name: "@github-actions"
 
-      - name: 查看完整输入输出
+      - name: Print outputs
         if: always()
         env:
           ANALYSIS_PROMPT: ${{ steps.analysis.outputs.analysis-prompt }}
