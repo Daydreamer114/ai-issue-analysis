@@ -1,6 +1,6 @@
 # ai-issue-analysis
 
-一个通用的 GitHub composite action，用来在 Issue 打开或被评论时调用 Copilot CLI 做分析，并把分析过程和最终结论持续回写到同一条评论里。
+一个通用的 GitHub composite action，用来在 Issue 打开或被评论时调用 **Copilot CLI** 或 **Cursor CLI** 做分析，并把分析过程和最终结论持续回写到同一条评论里。
 
 实战效果展示：
 
@@ -8,6 +8,8 @@
 - [Bot 响应 @ 进行分析回复 ISSUE: 换班时会把训练室干员换下](https://github.com/MaaAssistantArknights/MaaAssistantArknights/issues/15963#issuecomment-4067281056)
 
 ## 快速接入
+
+### 使用 GitHub Copilot
 
 1. 请确保你有 Copilot Pro (当前仅支持 Copilot，以后可能适配 codex 等更多工具，欢迎 ISSUE 催更~)
 2. 前往 [GitHub PAT](https://github.com/settings/personal-access-tokens) 新增一个 token  
@@ -28,6 +30,23 @@
 
 6. 新提个 issue 测试下能否正常运行了，或者在以前的 issue 里 `@github-actions`
 
+### 使用 Cursor CLI（可选）
+
+1. 前往 [Cursor Dashboard](https://cursor.com/dashboard/integrations) 创建 API Key
+2. 在仓库 Secrets 中添加 `CURSOR_API_KEY`
+3. 调用 action 时指定 `ai-provider: cursor` 并传入 `cursor-api-key`：
+
+```yaml
+- uses: Daydreamer114/ai-issue-analysis@feat/cursor
+  with:
+    ai-provider: cursor
+    github-token: ${{ secrets.GITHUB_TOKEN }}
+    cursor-api-key: ${{ secrets.CURSOR_API_KEY }}
+    copilot-github-token: ${{ secrets.COPILOT_GITHUB_TOKEN }}  # action schema 仍为 required，cursor 分支不会用到
+```
+
+> 不传 `ai-provider` 时默认使用 Copilot，现有 workflow 无需改动。
+
 > [!TIP]
 >
 > 如果你的项目有固定的日志包命名、关键日志路径、附件目录、模块映射或上游依赖，建议在这个通用版基础上微调 `SKILL.md`，分析质量会更高。最佳实践参考：
@@ -45,6 +64,9 @@
 
 - `github-token`: 用于创建和更新 Issue 评论
 - `copilot-github-token`: Copilot CLI 使用的 Fine-grained token，支持传多个 token，每行一个，action 会随机选择一个使用
+- `ai-provider`: AI 后端，`copilot`（默认）或 `cursor`
+- `cursor-api-key`: Cursor CLI 使用的 API Key；`ai-provider=cursor` 时在运行时必填，支持多 key 换行随机选择
+- `cursor-model`: Cursor CLI 模型名，默认 `composer-2.5`
 - `bot-name`: 从 `issue_comment` 正文中剥离掉的 bot mention，比如 `@YourBot`
 - `initial-comment-body`: 开始分析时先发出的评论正文
 - `action-link-text`: 评论里展示的运行链接文字
@@ -93,7 +115,8 @@
 
 - action 内部会自动 `checkout` 调用方仓库
 - 如果调用方已经自己 checkout，或者前置步骤会生成工作区文件，可以把 `checkout-repository` 设为 `false`
-- 会自动安装 `@github/copilot`
+- `ai-provider` 省略时默认 `copilot`，会自动安装 `@github/copilot`
+- `ai-provider=cursor` 时会安装 Cursor CLI 并调用 `cursor-agent`
 - 会先创建一条评论，然后持续更新这条评论
 - 会导出 `comment-id`、`comment-url`、`analysis-prompt`、`copilot-output`、`final-conclusion` 等 action outputs
 - `copilot-output` 会包含 Copilot 启动前的参数打印和 prompt 正文，不再只是 Copilot 进程本身的 stdout/stderr
