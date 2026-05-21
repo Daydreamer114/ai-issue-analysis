@@ -93,10 +93,6 @@ inputs:
     description: Cursor CLI model name passed to cursor-agent --model.
     required: false
     default: composer-2.5
-  cursor-cli-version:
-    description: Cursor CLI lab build id (for example 2026.05.20-2b5dd59). Empty resolves the version pinned by the official install script metadata.
-    required: false
-    default: ""
 
 outputs:
   issue-number:
@@ -297,78 +293,9 @@ runs:
     - name: Install Cursor CLI
       if: ${{ steps.provider.outputs.provider == 'cursor' }}
       shell: bash
-      env:
-        INPUT_CURSOR_CLI_VERSION: ${{ inputs.cursor-cli-version }}
       run: |
-        set -euo pipefail
-
-        if [ -n "${RUNNER_OS:-}" ]; then
-          case "${RUNNER_OS}" in
-            Linux) OS="linux" ;;
-            macOS) OS="darwin" ;;
-            Windows)
-              echo "Cursor CLI install is not supported on Windows runners. Use runs-on: ubuntu-latest or macos-latest."
-              exit 1
-              ;;
-            *)
-              echo "Unsupported RUNNER_OS: ${RUNNER_OS}. Cursor CLI requires Linux or macOS runners."
-              exit 1
-              ;;
-          esac
-        else
-          case "$(uname -s)" in
-            Linux*) OS="linux" ;;
-            Darwin*) OS="darwin" ;;
-            *)
-              echo "Unsupported operating system: $(uname -s). Cursor CLI requires Linux or macOS runners."
-              exit 1
-              ;;
-          esac
-        fi
-
-        ARCH="$(uname -m)"
-        case "${ARCH}" in
-          x86_64|amd64) ARCH="x64" ;;
-          arm64|aarch64) ARCH="arm64" ;;
-          *)
-            echo "Unsupported architecture: ${ARCH}"
-            exit 1
-            ;;
-        esac
-
-        VERSION="${INPUT_CURSOR_CLI_VERSION}"
-        if [ -z "$VERSION" ]; then
-          INSTALL_SCRIPT="${RUNNER_TEMP}/cursor-install.sh"
-          curl -fsSL "https://cursor.com/install" -o "$INSTALL_SCRIPT"
-          VERSION="$(grep -Eo 'downloads\.cursor\.com/lab/[^/]+' "$INSTALL_SCRIPT" | head -1 | cut -d/ -f3)"
-          if [ -z "$VERSION" ]; then
-            echo "Unable to resolve Cursor CLI version from install script metadata."
-            exit 1
-          fi
-        fi
-
-        PACKAGE_URL="https://downloads.cursor.com/lab/${VERSION}/${OS}/${ARCH}/agent-cli-package.tar.gz"
-        PACKAGE_FILE="${RUNNER_TEMP}/cursor-agent-cli.tar.gz"
-
-        echo "Installing Cursor CLI ${VERSION} for ${OS}/${ARCH}"
-        curl -fSL "$PACKAGE_URL" -o "$PACKAGE_FILE"
-
-        if [ ! -s "$PACKAGE_FILE" ]; then
-          echo "Downloaded Cursor CLI package is empty."
-          exit 1
-        fi
-
-        tar -tzf "$PACKAGE_FILE" >/dev/null
-
-        INSTALL_ROOT="${HOME}/.local/share/cursor-agent/versions/${VERSION}"
-        mkdir -p "$INSTALL_ROOT"
-        tar --strip-components=1 -xzf "$PACKAGE_FILE" -C "$INSTALL_ROOT"
-
-        mkdir -p "${HOME}/.local/bin"
-        ln -sf "${INSTALL_ROOT}/cursor-agent" "${HOME}/.local/bin/cursor-agent"
-        ln -sf "${INSTALL_ROOT}/cursor-agent" "${HOME}/.local/bin/agent"
-        echo "${HOME}/.local/bin" >> "$GITHUB_PATH"
-
+        curl https://cursor.com/install -fsS | bash
+        echo "$HOME/.local/bin" >> "$GITHUB_PATH"
         cursor-agent --version
 
     - name: Resolve Copilot token

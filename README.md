@@ -66,7 +66,6 @@
 - `ai-provider`: AI 后端，`copilot`（默认）或 `cursor`
 - `cursor-api-key`: Cursor CLI 使用的 API Key；`ai-provider=cursor` 时在运行时必填，支持多 key 换行随机选择
 - `cursor-model`: Cursor CLI 模型名，默认 `composer-2.5`
-- `cursor-cli-version`: Cursor CLI lab 构建版本；留空时从官方 install 脚本元数据解析，建议生产环境固定版本
 - `bot-name`: 从 `issue_comment` 正文中剥离掉的 bot mention，比如 `@YourBot`
 - `initial-comment-body`: 开始分析时先发出的评论正文
 - `action-link-text`: 评论里展示的运行链接文字
@@ -116,7 +115,7 @@
 - action 内部会自动 `checkout` 调用方仓库
 - 如果调用方已经自己 checkout，或者前置步骤会生成工作区文件，可以把 `checkout-repository` 设为 `false`
 - `ai-provider` 省略时默认 `copilot`，会自动安装 `@github/copilot`
-- `ai-provider=cursor` 时会安装 Cursor CLI 并调用 `cursor-agent`
+- `ai-provider=cursor` 时会通过官方 [cursor.com/install](https://cursor.com/install) 安装 Cursor CLI 并调用 `cursor-agent`
 - 会先创建一条评论，然后持续更新这条评论
 - 会导出 `comment-id`、`comment-url`、`analysis-prompt`、`copilot-output`、`final-conclusion` 等 action outputs
 - `copilot-output` 会包含启动前的参数打印和 prompt 正文，不再只是 AI CLI 进程本身的 stdout/stderr
