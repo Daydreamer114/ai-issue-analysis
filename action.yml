@@ -302,7 +302,30 @@ runs:
       run: |
         set -euo pipefail
 
-        OS="linux"
+        if [ -n "${RUNNER_OS:-}" ]; then
+          case "${RUNNER_OS}" in
+            Linux) OS="linux" ;;
+            macOS) OS="darwin" ;;
+            Windows)
+              echo "Cursor CLI install is not supported on Windows runners. Use runs-on: ubuntu-latest or macos-latest."
+              exit 1
+              ;;
+            *)
+              echo "Unsupported RUNNER_OS: ${RUNNER_OS}. Cursor CLI requires Linux or macOS runners."
+              exit 1
+              ;;
+          esac
+        else
+          case "$(uname -s)" in
+            Linux*) OS="linux" ;;
+            Darwin*) OS="darwin" ;;
+            *)
+              echo "Unsupported operating system: $(uname -s). Cursor CLI requires Linux or macOS runners."
+              exit 1
+              ;;
+          esac
+        fi
+
         ARCH="$(uname -m)"
         case "${ARCH}" in
           x86_64|amd64) ARCH="x64" ;;
