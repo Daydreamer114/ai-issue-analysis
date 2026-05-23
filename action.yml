@@ -695,17 +695,19 @@ runs:
       if: ${{ always() }}
       uses: actions/upload-artifact@v4
       with:
-        name: copilot-output-issue-${{ steps.issue_number.outputs.issue_number }}-comment-${{ steps.comment_target.outputs.comment_id || 'none' }}
+        name: copilot-output-issue-${{ steps.issue_number.outputs.issue_number }}-comment-${{ steps.comment_target.outputs.comment_id || 'none' }}-${{ steps.provider.outputs.provider }}
         path: ${{ steps.runtime.outputs.copilot_output_artifact_file }}
         if-no-files-found: error
+        overwrite: true
 
     - name: Upload final conclusion artifact
       if: ${{ always() }}
       uses: actions/upload-artifact@v4
       with:
-        name: final-conclusion-issue-${{ steps.issue_number.outputs.issue_number }}-comment-${{ steps.comment_target.outputs.comment_id || 'none' }}
+        name: final-conclusion-issue-${{ steps.issue_number.outputs.issue_number }}-comment-${{ steps.comment_target.outputs.comment_id || 'none' }}-${{ steps.provider.outputs.provider }}
         path: ${{ steps.runtime.outputs.final_conclusion_artifact_file }}
         if-no-files-found: error
+        overwrite: true
 
     - name: Update comment with analysis result
       if: ${{ always() && steps.comment_target.outputs.comment_id != '' }}
